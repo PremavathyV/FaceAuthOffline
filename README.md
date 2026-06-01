@@ -1,18 +1,16 @@
-# FaceAuth Offline — Hackathon 7.0
+# FaceAuth Offline
 
-Secure, offline facial recognition + liveness detection for React Native.
-Targets mid-range Android (8.0+) devices with zero internet dependency.
+Secure, offline facial recognition and liveness detection for React Native.
+Supports Android 8.0+ devices with zero internet dependency.
 
 ---
 
 ## Prerequisites
 
-Install these before running:
-
 | Tool | Version | Download |
 |------|---------|----------|
 | Node.js | 18+ | https://nodejs.org |
-| JDK | 17 | https://adoptium.net (Temurin JDK 17) |
+| JDK | 17 | https://adoptium.net |
 | Android Studio | Latest | https://developer.android.com/studio |
 | Android SDK | API 33+ | Via Android Studio SDK Manager |
 
@@ -20,9 +18,7 @@ Install these before running:
 
 ## Environment Setup (Windows)
 
-### 1. Set Environment Variables
-
-Open **System Environment Variables** and add:
+### Set Environment Variables
 
 **New System Variable:**
 ```
@@ -37,9 +33,9 @@ JAVA_HOME    = C:\Users\<YourName>\AppData\Local\Programs\Eclipse Adoptium\jdk-1
 %JAVA_HOME%\bin
 ```
 
-### 2. Create Android Emulator
+### Create Android Emulator
 
-- Open Android Studio → Device Manager → Create Virtual Device
+- Android Studio → Device Manager → Create Virtual Device
 - Select: **Pixel 6** → API **33** → Finish
 - Start the emulator (▶️ Play button)
 
@@ -60,7 +56,7 @@ $env:ANDROID_HOME = "C:\Users\<YourName>\AppData\Local\Android\Sdk"
 $env:PATH = $env:PATH + ";$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator"
 ```
 
-### Step 3 — Bundle JS (required for offline mode)
+### Step 3 — Bundle JS
 ```powershell
 New-Item -ItemType Directory -Force -Path "android\app\src\main\assets" | Out-Null
 
@@ -79,7 +75,7 @@ cd android
 cd ..
 ```
 
-### Step 5 — Install & Launch on Emulator
+### Step 5 — Install & Launch
 ```powershell
 adb install -r "android\app\build\outputs\apk\debug\app-debug.apk"
 adb shell am start -n com.faceauthoffline/.MainActivity
@@ -89,8 +85,6 @@ adb shell am start -n com.faceauthoffline/.MainActivity
 
 ## Quick Run (All-in-one)
 
-Copy and paste this entire block into PowerShell:
-
 ```powershell
 $env:JAVA_HOME = "C:\Users\Premavathy\AppData\Local\Programs\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 $env:ANDROID_HOME = "C:\Users\Premavathy\AppData\Local\Android\Sdk"
@@ -98,30 +92,27 @@ $env:PATH = $env:PATH + ";$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$e
 
 cd C:\Users\Premavathy\Desktop\hack\FaceAuthOffline
 
-# Bundle JS
 New-Item -ItemType Directory -Force -Path "android\app\src\main\assets" | Out-Null
 node node_modules/react-native/cli.js bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
-# Build
 cd android; .\gradlew app:assembleDebug; cd ..
 
-# Install & Launch
 adb install -r "android\app\build\outputs\apk\debug\app-debug.apk"
 adb shell am start -n com.faceauthoffline/.MainActivity
 ```
 
 ---
 
-## App Features
+## Features
 
 | Feature | Status |
 |---------|--------|
 | Enroll User | ✅ Working |
 | Liveness Challenge (blink/smile/turn) | ✅ Working |
 | Face Authentication | ✅ Working |
-| Offline Storage (in-memory) | ✅ Working |
-| AWS Sync (when online) | 🔧 Stub — configure endpoint |
-| TFLite Face Embedding | 🔧 Stub — add model files |
+| Offline Storage | ✅ Working |
+| AWS Sync (when online) | 🔧 Configure endpoint |
+| TFLite Face Embedding | 🔧 Add model files |
 
 ---
 
@@ -129,22 +120,22 @@ adb shell am start -n com.faceauthoffline/.MainActivity
 
 ```
 src/
-├── App.tsx                    # Root navigation (pure RN, no dependencies)
+├── App.tsx
 ├── screens/
-│   ├── HomeScreen.tsx         # Entry point
-│   ├── EnrollScreen.tsx       # User enrollment + liveness challenge
-│   ├── AuthScreen.tsx         # Face authentication
-│   └── ResultScreen.tsx       # Auth result display
+│   ├── HomeScreen.tsx
+│   ├── EnrollScreen.tsx
+│   ├── AuthScreen.tsx
+│   └── ResultScreen.tsx
 └── services/
-    ├── faceRecognition.ts     # Cosine similarity matching
-    ├── livenessDetector.ts    # Active challenge (blink/smile/turn)
-    ├── database.ts            # In-memory storage
-    └── syncService.ts         # AWS sync stub
+    ├── faceRecognition.ts
+    ├── livenessDetector.ts
+    ├── database.ts
+    └── syncService.ts
 assets/
 └── models/
-    ├── mobilefacenet.tflite   # Face embedding model (~5MB)
-    ├── face_detector.tflite   # BlazeFace detector (~0.2MB)
-    └── face_landmarker.task   # MediaPipe landmarks (~3.6MB)
+    ├── mobilefacenet.tflite   (~5MB)
+    ├── face_detector.tflite   (~0.2MB)
+    └── face_landmarker.task   (~3.6MB)
 ```
 
 ---
@@ -166,22 +157,9 @@ assets/
 |-------|-----|
 | `adb not found` | Add `%ANDROID_HOME%\platform-tools` to PATH |
 | `java not found` | Add `%JAVA_HOME%\bin` to PATH, restart terminal |
-| `WindowsRegistry not supported` | Remove `includeBuild` from settings.gradle |
-| `react-native:+ not found` | Remove native modules, use pure RN |
-| `Can't find service: package` | Emulator not fully booted — wait for home screen |
+| `Can't find service: package` | Wait for emulator home screen to fully load |
 | App crashes on launch | Run JS bundle step (Step 3) before building |
 | Port 8081 in use | Run `taskkill /F /IM node.exe` |
-
----
-
-## Hackathon 7.0 — Evaluation Criteria
-
-| Criteria | Marks | Our Solution |
-|----------|-------|-------------|
-| Innovation Level | 30 | MobileFaceNet INT8, ~9MB total, offline liveness |
-| Feasibility | 30 | Pure RN, no internet needed, <1s target |
-| Scalability & Sustainability | 20 | AWS sync stub, in-memory → SQLite upgrade path |
-| Presentation & Documentation | 20 | This README + inline code comments |
 
 ---
 
