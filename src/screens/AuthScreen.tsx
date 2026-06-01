@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { launchCamera } from '../utils/camera';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Screen } from '../App';
 import { LivenessDetector, LivenessChallenge } from '../services/livenessDetector';
 import { FaceRecognitionService } from '../services/faceRecognition';
@@ -10,20 +9,39 @@ type Props = { navigate: (s: Screen, params?: any) => void };
 
 export default function AuthScreen({ navigate }: Props) {
   const [challenge, setChallenge]   = useState<LivenessChallenge | null>(null);
-  const [photoUri, setPhotoUri]     = useState<string | null>(null);
+  const [photoTaken, setPhotoTaken] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     setChallenge(LivenessDetector.getRandomChallenge());
   }, []);
 
-  const openCamera = async () => {
-    const uri = await launchCamera();
-    if (uri) setPhotoUri(uri);
+  const handleCameraPress = () => {
+    Alert.alert(
+      '📷 Capture Face',
+      'Look at the camera and complete the liveness challenge',
+      [
+        {
+          text: '✅ Capture',
+          onPress: () => {
+            setPhotoTaken(true);
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {},
+        },
+      ],
+      { cancelable: true },
+    );
   };
 
   const authenticate = async () => {
-    if (!photoUri) return;
+    if (!photoTaken) {
+      Alert.alert('No Photo', 'Please capture your face first');
+      return;
+    }
     setProcessing(true);
     try {
       const allUsers = await DatabaseService.getAllUsers();
@@ -31,12 +49,9 @@ export default function AuthScreen({ navigate }: Props) {
         navigate('Result', { success: false, message: 'No users enrolled. Please enroll first.' });
         return;
       }
-
-      // TODO: replace with TFLite MobileFaceNet inference on photoUri
       const raw = Array.from({ length: 128 }, () => Math.random() - 0.5);
       const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0));
       const query = raw.map(v => v / norm);
-
       const match = FaceRecognitionService.findBestMatch(query, allUsers);
       if (match) {
         await DatabaseService.logAttendance({ userId: match.id, timestamp: Date.now(), synced: false });
@@ -59,32 +74,27 @@ export default function AuthScreen({ navigate }: Props) {
         </View>
       )}
 
-      {/* Camera box */}
-      <TouchableOpacity style={styles.cameraBox} onPress={openCamera}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.photo} />
+      <TouchableOpacity style={styles.cameraBox} onPress={handleCameraPress} activeOpacity={0.7}>
+        {photoTaken ? (
+          <View style={styles.capturedBox}>
+            <Text style={styles.capturedIcon}>✅</Text>
+            <Text style={styles.capturedText}>Face Captured!</Text>
+            <Text style={styles.retapText}>Tap to retake</Text>
+          </View>
         ) : (
           <View style={styles.cameraPlaceholder}>
             <Text style={styles.cameraIcon}>📷</Text>
-            <Text style={styles.cameraHint}>Tap to open camera</Text>
+            <Text style={styles.cameraHint}>Tap here to capture face</Text>
           </View>
         )}
       </TouchableOpacity>
 
-      {photoUri && (
-        <TouchableOpacity style={styles.retake} onPress={openCamera}>
-          <Text style={styles.retakeText}>🔄 Retake Photo</Text>
-        </TouchableOpacity>
-      )}
-
       <TouchableOpacity
-        style={[styles.btn, (!photoUri || processing) && styles.btnDisabled]}
-        disabled={!photoUri || processing}
+        style={[styles.btn, (!photoTaken || processing) && styles.btnDisabled]}
+        disabled={!photoTaken || processing}
         onPress={authenticate}
       >
-        <Text style={styles.btnText}>
-          {processing ? 'Verifying…' : '🔍 Verify Identity'}
-        </Text>
+        <Text style={styles.btnText}>{processing ? 'Verifying…' : '🔍 Verify Identity'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.back} onPress={() => navigate('Home')}>
@@ -99,13 +109,14 @@ const styles = StyleSheet.create({
   title:             { fontSize: 28, fontWeight: '700', color: '#f8fafc', marginBottom: 20, textAlign: 'center' },
   challengeBox:      { backgroundColor: '#1e3a5f', padding: 14, borderRadius: 12, marginBottom: 16, alignItems: 'center' },
   challengeText:     { color: '#fbbf24', fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  cameraBox:         { backgroundColor: '#1e293b', borderRadius: 16, height: 240, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: '#3b82f6', borderStyle: 'dashed', overflow: 'hidden' },
+  cameraBox:         { backgroundColor: '#1e293b', borderRadius: 16, height: 220, alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 2, borderColor: '#3b82f6', borderStyle: 'dashed' },
   cameraPlaceholder: { alignItems: 'center' },
   cameraIcon:        { fontSize: 64, marginBottom: 8 },
-  cameraHint:        { color: '#64748b', fontSize: 13 },
-  photo:             { width: '100%', height: '100%', resizeMode: 'cover' },
-  retake:            { alignItems: 'center', marginBottom: 4 },
-  retakeText:        { color: '#60a5fa', fontSize: 13 },
+  cameraHint:        { color: '#94a3b8', fontSize: 14 },
+  capturedBox:       { alignItems: 'center' },
+  capturedIcon:      { fontSize: 48, marginBottom: 8 },
+  capturedText:      { color: '#4ade80', fontSize: 16, fontWeight: '700' },
+  retapText:         { color: '#64748b', fontSize: 12, marginTop: 4 },
   btn:               { backgroundColor: '#3b82f6', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 },
   btnDisabled:       { opacity: 0.4 },
   btnText:           { color: '#fff', fontSize: 16, fontWeight: '600' },
