@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { launchCamera } from '../utils/camera';
 import { Screen } from '../App';
 import { LivenessDetector, LivenessChallenge } from '../services/livenessDetector';
 import { FaceRecognitionService } from '../services/faceRecognition';
@@ -9,11 +10,20 @@ type Props = { navigate: (s: Screen, params?: any) => void };
 
 export default function AuthScreen({ navigate }: Props) {
   const [challenge, setChallenge]   = useState<LivenessChallenge | null>(null);
+  const [photoUri, setPhotoUri]     = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => { setChallenge(LivenessDetector.getRandomChallenge()); }, []);
+  useEffect(() => {
+    setChallenge(LivenessDetector.getRandomChallenge());
+  }, []);
+
+  const openCamera = async () => {
+    const uri = await launchCamera();
+    if (uri) setPhotoUri(uri);
+  };
 
   const authenticate = async () => {
+    if (!photoUri) return;
     setProcessing(true);
     try {
       const allUsers = await DatabaseService.getAllUsers();
@@ -21,7 +31,8 @@ export default function AuthScreen({ navigate }: Props) {
         navigate('Result', { success: false, message: 'No users enrolled. Please enroll first.' });
         return;
       }
-      // Mock query embedding (replace with TFLite in production)
+
+      // TODO: replace with TFLite MobileFaceNet inference on photoUri
       const raw = Array.from({ length: 128 }, () => Math.random() - 0.5);
       const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0));
       const query = raw.map(v => v / norm);
@@ -41,18 +52,41 @@ export default function AuthScreen({ navigate }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Authenticate</Text>
-      <View style={styles.faceBox}>
-        <Text style={styles.faceIcon}>👤</Text>
-        <Text style={styles.faceHint}>Position your face</Text>
-      </View>
+
       {challenge && (
         <View style={styles.challengeBox}>
           <Text style={styles.challengeText}>{challenge.instruction}</Text>
         </View>
       )}
-      <TouchableOpacity style={[styles.btn, processing && styles.btnDisabled]} disabled={processing} onPress={authenticate}>
-        <Text style={styles.btnText}>{processing ? 'Verifying…' : '🔍 Verify Identity'}</Text>
+
+      {/* Camera box */}
+      <TouchableOpacity style={styles.cameraBox} onPress={openCamera}>
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={styles.photo} />
+        ) : (
+          <View style={styles.cameraPlaceholder}>
+            <Text style={styles.cameraIcon}>📷</Text>
+            <Text style={styles.cameraHint}>Tap to open camera</Text>
+          </View>
+        )}
       </TouchableOpacity>
+
+      {photoUri && (
+        <TouchableOpacity style={styles.retake} onPress={openCamera}>
+          <Text style={styles.retakeText}>🔄 Retake Photo</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
+        style={[styles.btn, (!photoUri || processing) && styles.btnDisabled]}
+        disabled={!photoUri || processing}
+        onPress={authenticate}
+      >
+        <Text style={styles.btnText}>
+          {processing ? 'Verifying…' : '🔍 Verify Identity'}
+        </Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.back} onPress={() => navigate('Home')}>
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
@@ -61,16 +95,20 @@ export default function AuthScreen({ navigate }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#0f172a', padding: 24, justifyContent: 'center' },
-  title:         { fontSize: 28, fontWeight: '700', color: '#f8fafc', marginBottom: 32, textAlign: 'center' },
-  faceBox:       { backgroundColor: '#1e293b', borderRadius: 120, width: 220, height: 220, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 24, borderWidth: 3, borderColor: '#3b82f6', borderStyle: 'dashed' },
-  faceIcon:      { fontSize: 80 },
-  faceHint:      { color: '#64748b', fontSize: 12, marginTop: 8 },
-  challengeBox:  { backgroundColor: '#1e3a5f', padding: 16, borderRadius: 12, marginBottom: 24, alignItems: 'center' },
-  challengeText: { color: '#fbbf24', fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  btn:           { backgroundColor: '#3b82f6', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnDisabled:   { opacity: 0.5 },
-  btnText:       { color: '#fff', fontSize: 16, fontWeight: '600' },
-  back:          { marginTop: 16, alignItems: 'center' },
-  backText:      { color: '#94a3b8', fontSize: 14 },
+  container:         { flex: 1, backgroundColor: '#0f172a', padding: 24, justifyContent: 'center' },
+  title:             { fontSize: 28, fontWeight: '700', color: '#f8fafc', marginBottom: 20, textAlign: 'center' },
+  challengeBox:      { backgroundColor: '#1e3a5f', padding: 14, borderRadius: 12, marginBottom: 16, alignItems: 'center' },
+  challengeText:     { color: '#fbbf24', fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  cameraBox:         { backgroundColor: '#1e293b', borderRadius: 16, height: 240, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: '#3b82f6', borderStyle: 'dashed', overflow: 'hidden' },
+  cameraPlaceholder: { alignItems: 'center' },
+  cameraIcon:        { fontSize: 64, marginBottom: 8 },
+  cameraHint:        { color: '#64748b', fontSize: 13 },
+  photo:             { width: '100%', height: '100%', resizeMode: 'cover' },
+  retake:            { alignItems: 'center', marginBottom: 4 },
+  retakeText:        { color: '#60a5fa', fontSize: 13 },
+  btn:               { backgroundColor: '#3b82f6', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 },
+  btnDisabled:       { opacity: 0.4 },
+  btnText:           { color: '#fff', fontSize: 16, fontWeight: '600' },
+  back:              { marginTop: 16, alignItems: 'center' },
+  backText:          { color: '#94a3b8', fontSize: 14 },
 });

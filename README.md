@@ -163,6 +163,43 @@ assets/
 
 ---
 
+## iOS Setup (Mac only)
+
+### Prerequisites
+- Mac computer with Xcode 14+
+- CocoaPods: `sudo gem install cocoapods`
+- Apple Developer account (for device testing)
+
+### Run on iOS
+
+```bash
+# Step 1 - Install dependencies
+cd FaceAuthOffline
+npm install
+
+# Step 2 - Install iOS pods
+cd ios
+pod install
+cd ..
+
+# Step 3 - Run on simulator
+npx react-native run-ios
+
+# Step 4 - Run on device
+npx react-native run-ios --device "Your iPhone Name"
+```
+
+### Build IPA for distribution
+```bash
+# Open Xcode
+open ios/FaceAuthOffline.xcworkspace
+
+# In Xcode:
+# Product → Archive → Distribute App
+```
+
+---
+
 ## License
 
 All models and libraries used are open-source (Apache 2.0 / MIT).
