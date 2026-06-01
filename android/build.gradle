@@ -1,0 +1,40 @@
+buildscript {
+    ext {
+        buildToolsVersion = "33.0.0"
+        minSdkVersion    = 26
+        compileSdkVersion = 33
+        targetSdkVersion  = 33
+        ndkVersion        = "23.1.7779620"
+        kotlinVersion     = "1.7.20"
+        RN_VERSION        = "0.73.11"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:7.4.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        // React Native 0.73 AARs on Maven Central
+        maven {
+            url "https://repo1.maven.org/maven2"
+        }
+        maven { url 'https://www.jitpack.io' }
+    }
+
+    // Force all react-native:+ to resolve to exact version
+    configurations.all {
+        resolutionStrategy {
+            force "com.facebook.react:react-native:${rootProject.ext.RN_VERSION}"
+            force "com.facebook.react:react-android:${rootProject.ext.RN_VERSION}"
+            force "com.facebook.react:hermes-android:${rootProject.ext.RN_VERSION}"
+        }
+    }
+}

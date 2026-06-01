@@ -1,0 +1,38 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# React Native
+.expo/
+dist/
+web-build/
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+*.keystore
+!android/app/debug.keystore
+
+# iOS
+ios/Pods/
+ios/build/
+
+# Metro
+.metro-health-check*
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+*.env
+.env.local
+.env.production
+
+# Assets - models are large, use Git LFS or store separately
+# assets/models/*.tflite
+# assets/models/*.task
+
+# APK (too large for GitHub — use Releases)
+*.apk
