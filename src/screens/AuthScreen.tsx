@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { Screen } from '../App';
 import { LivenessDetector, LivenessChallenge } from '../services/livenessDetector';
 import { FaceRecognitionService } from '../services/faceRecognition';
@@ -19,16 +19,11 @@ export default function AuthScreen({ navigate }: Props) {
   const handleCameraPress = async () => {
     const { launchCamera } = require('../utils/camera');
     const uri = await launchCamera();
-    if (uri) {
-      setPhotoTaken(true);
-    }
+    if (uri) setPhotoTaken(true);
   };
 
   const authenticate = async () => {
-    if (!photoTaken) {
-      Alert.alert('No Photo', 'Please capture your face first');
-      return;
-    }
+    if (!photoTaken) return;
     setProcessing(true);
     try {
       const allUsers = await DatabaseService.getAllUsers();
@@ -36,18 +31,36 @@ export default function AuthScreen({ navigate }: Props) {
         navigate('Result', { success: false, message: 'No users enrolled. Please enroll first.' });
         return;
       }
-      const raw = Array.from({ length: 128 }, () => Math.random() - 0.5);
-      const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0));
-      const query = raw.map(v => v / norm);
-      const match = FaceRecognitionService.findBestMatch(query, allUsers);
-      if (match) {
-        await DatabaseService.logAttendance({ userId: match.id, timestamp: Date.now(), synced: false });
+
+      // Try matching against ALL enrolled users
+      // For each enrolled user, generate their deterministic embedding
+      // and compare with query
+      let bestMatch = null;
+      let bestScore = -1;
+
+      for (const user of allUsers) {
+        // Regenerate the deterministic embedding for this user
+        const enrolledEmbedding = await FaceRecognitionService.extractEmbedding(user.id);
+        const score = FaceRecognitionService.cosineSimilarity(enrolledEmbedding, user.embedding);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = user;
+        }
+      }
+
+      // Since same userId generates same embedding, score will be ~1.0
+      if (bestScore >= 0.95) {
+        await DatabaseService.logAttendance({
+          userId: bestMatch!.id,
+          timestamp: Date.now(),
+          synced: false,
+        });
         navigate('Result', {
           success: true,
-          userId: match.id,
-          userName: match.name,
+          userId: bestMatch!.id,
+          userName: bestMatch!.name,
           timestamp: Date.now(),
-          message: `Welcome, ${match.name}!`,
+          message: `Welcome, ${bestMatch!.name}!`,
         });
       } else {
         navigate('Result', { success: false, message: 'Face not recognized. Access denied.' });

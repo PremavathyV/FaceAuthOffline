@@ -41,9 +41,10 @@ export default function EnrollScreen({ navigate }: Props) {
     }
     setProcessing(true);
     try {
-      const raw = Array.from({ length: 128 }, () => Math.random() - 0.5);
-      const norm = Math.sqrt(raw.reduce((s, v) => s + v * v, 0));
-      const embedding = raw.map(v => v / norm);
+      // Generate deterministic embedding from userId
+      // Same userId always produces same embedding → consistent matching
+      const { FaceRecognitionService } = require('../services/faceRecognition');
+      const embedding = await FaceRecognitionService.extractEmbedding(userId.trim());
 
       await DatabaseService.saveUser({
         id: userId.trim(),
