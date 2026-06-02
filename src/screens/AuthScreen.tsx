@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Screen } from '../App';
 import { LivenessDetector, LivenessChallenge } from '../services/livenessDetector';
 import { FaceRecognitionService } from '../services/faceRecognition';
@@ -16,25 +16,12 @@ export default function AuthScreen({ navigate }: Props) {
     setChallenge(LivenessDetector.getRandomChallenge());
   }, []);
 
-  const handleCameraPress = () => {
-    Alert.alert(
-      '📷 Capture Face',
-      'Look at the camera and complete the liveness challenge',
-      [
-        {
-          text: '✅ Capture',
-          onPress: () => {
-            setPhotoTaken(true);
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => {},
-        },
-      ],
-      { cancelable: true },
-    );
+  const handleCameraPress = async () => {
+    const { launchCamera } = require('../utils/camera');
+    const uri = await launchCamera();
+    if (uri) {
+      setPhotoTaken(true);
+    }
   };
 
   const authenticate = async () => {
@@ -55,7 +42,13 @@ export default function AuthScreen({ navigate }: Props) {
       const match = FaceRecognitionService.findBestMatch(query, allUsers);
       if (match) {
         await DatabaseService.logAttendance({ userId: match.id, timestamp: Date.now(), synced: false });
-        navigate('Result', { success: true, userId: match.id, message: `Welcome, ${match.name}!` });
+        navigate('Result', {
+          success: true,
+          userId: match.id,
+          userName: match.name,
+          timestamp: Date.now(),
+          message: `Welcome, ${match.name}!`,
+        });
       } else {
         navigate('Result', { success: false, message: 'Face not recognized. Access denied.' });
       }

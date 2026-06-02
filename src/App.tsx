@@ -6,11 +6,20 @@ import AuthScreen from './screens/AuthScreen';
 import ResultScreen from './screens/ResultScreen';
 
 export type Screen = 'Home' | 'Enroll' | 'Auth' | 'Result';
-export type ResultParams = { success: boolean; userId?: string; message: string };
+export type ResultParams = {
+  success: boolean;
+  userId?: string;
+  userName?: string;
+  timestamp?: number;
+  message: string;
+};
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('Home');
-  const [resultParams, setResultParams] = useState<ResultParams>({ success: false, message: '' });
+  const [resultParams, setResultParams] = useState<ResultParams>({
+    success: false,
+    message: '',
+  });
 
   const navigate = (s: Screen, params?: ResultParams) => {
     if (params) setResultParams(params);
