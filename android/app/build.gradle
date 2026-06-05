@@ -47,6 +47,9 @@ android {
 dependencies {
     implementation("com.facebook.react:react-android:${RN_VERSION}")
     implementation("com.facebook.react:hermes-android:${RN_VERSION}")
+    // TFLite for real face recognition
+    implementation("org.tensorflow:tensorflow-lite:2.13.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

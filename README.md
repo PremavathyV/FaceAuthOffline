@@ -5,6 +5,37 @@ Supports Android 8.0+ devices with zero internet dependency.
 
 ---
 
+## How It Works
+
+```
+📷 Capture Face
+      ↓
+🧠 MobileFaceNet TFLite (native Kotlin)
+      ↓
+📐 128-d Face Embedding
+      ↓
+📊 Cosine Similarity (threshold: 0.60)
+      ↓
+✅ ACCESS GRANTED / ❌ ACCESS DENIED
+```
+
+---
+
+## Features
+
+| Feature | Status |
+|---------|--------|
+| Real face enrollment | ✅ TFLite MobileFaceNet |
+| Real face authentication | ✅ Cosine similarity matching |
+| Liveness challenge (blink/smile/turn) | ✅ Active challenge UI |
+| Offline storage | ✅ In-memory (session) |
+| Professional result screen | ✅ Name + ID + Time |
+| AWS sync stub | ✅ Ready to configure |
+| Android 8.0+ | ✅ Supported |
+| iOS | ✅ Source ready (Mac needed to build) |
+
+---
+
 ## Prerequisites
 
 | Tool | Version | Download |
@@ -16,103 +47,52 @@ Supports Android 8.0+ devices with zero internet dependency.
 
 ---
 
-## Environment Setup (Windows)
+## Quick Install (Android)
 
-### Set Environment Variables
-
-**New System Variable:**
-```
-ANDROID_HOME = C:\Users\<YourName>\AppData\Local\Android\Sdk
-JAVA_HOME    = C:\Users\<YourName>\AppData\Local\Programs\Eclipse Adoptium\jdk-17.x.x-hotspot
-```
-
-**Add to PATH:**
-```
-%ANDROID_HOME%\platform-tools
-%ANDROID_HOME%\emulator
-%JAVA_HOME%\bin
-```
-
-### Create Android Emulator
-
-- Android Studio → Device Manager → Create Virtual Device
-- Select: **Pixel 6** → API **33** → Finish
-- Start the emulator (▶️ Play button)
+Download APK from [Releases](../../releases) and install on Android device.
 
 ---
 
-## Run the App
+## Build & Run (Android)
 
-### Step 1 — Install dependencies
-```bash
-cd FaceAuthOffline
-npm install
-```
-
-### Step 2 — Set environment (run every new terminal session)
+### Set Environment Variables (Windows)
 ```powershell
-$env:JAVA_HOME = "C:\Users\<YourName>\AppData\Local\Programs\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
+$env:JAVA_HOME = "C:\Users\<YourName>\AppData\Local\Programs\Eclipse Adoptium\jdk-17.x.x-hotspot"
 $env:ANDROID_HOME = "C:\Users\<YourName>\AppData\Local\Android\Sdk"
 $env:PATH = $env:PATH + ";$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator"
 ```
 
-### Step 3 — Bundle JS
+### One-command build & run
 ```powershell
-New-Item -ItemType Directory -Force -Path "android\app\src\main\assets" | Out-Null
+cd FaceAuthOffline
 
-node node_modules/react-native/cli.js bundle `
-  --platform android `
-  --dev false `
-  --entry-file index.js `
-  --bundle-output android/app/src/main/assets/index.android.bundle `
-  --assets-dest android/app/src/main/res
-```
+# 1. Install dependencies
+npm install
 
-### Step 4 — Build APK
-```powershell
-cd android
-.\gradlew app:assembleDebug
-cd ..
-```
-
-### Step 5 — Install & Launch
-```powershell
-adb install -r "android\app\build\outputs\apk\debug\app-debug.apk"
-adb shell am start -n com.faceauthoffline/.MainActivity
-```
-
----
-
-## Quick Run (All-in-one)
-
-```powershell
-$env:JAVA_HOME = "C:\Users\Premavathy\AppData\Local\Programs\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
-$env:ANDROID_HOME = "C:\Users\Premavathy\AppData\Local\Android\Sdk"
-$env:PATH = $env:PATH + ";$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator"
-
-cd C:\Users\Premavathy\Desktop\hack\FaceAuthOffline
-
+# 2. Bundle JS
 New-Item -ItemType Directory -Force -Path "android\app\src\main\assets" | Out-Null
 node node_modules/react-native/cli.js bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
+# 3. Build APK
 cd android; .\gradlew app:assembleDebug; cd ..
 
+# 4. Install on device/emulator
 adb install -r "android\app\build\outputs\apk\debug\app-debug.apk"
 adb shell am start -n com.faceauthoffline/.MainActivity
 ```
 
 ---
 
-## Features
+## Build & Run (iOS — Mac only)
 
-| Feature | Status |
-|---------|--------|
-| Enroll User | ✅ Working |
-| Liveness Challenge (blink/smile/turn) | ✅ Working |
-| Face Authentication | ✅ Working |
-| Offline Storage | ✅ Working |
-| AWS Sync (when online) | 🔧 Configure endpoint |
-| TFLite Face Embedding | 🔧 Add model files |
+```bash
+cd FaceAuthOffline
+npm install
+cd ios
+pod install
+cd ..
+npx react-native run-ios
+```
 
 ---
 
@@ -120,34 +100,45 @@ adb shell am start -n com.faceauthoffline/.MainActivity
 
 ```
 src/
-├── App.tsx
+├── App.tsx                          # Root navigation
 ├── screens/
-│   ├── HomeScreen.tsx
-│   ├── EnrollScreen.tsx
-│   ├── AuthScreen.tsx
-│   └── ResultScreen.tsx
-└── services/
-    ├── faceRecognition.ts
-    ├── livenessDetector.ts
-    ├── database.ts
-    └── syncService.ts
-assets/
-└── models/
-    ├── mobilefacenet.tflite   (~5MB)
-    ├── face_detector.tflite   (~0.2MB)
-    └── face_landmarker.task   (~3.6MB)
+│   ├── HomeScreen.tsx               # Entry point
+│   ├── EnrollScreen.tsx             # Face enrollment
+│   ├── AuthScreen.tsx               # Face authentication
+│   └── ResultScreen.tsx             # Professional result display
+├── services/
+│   ├── faceRecognition.ts           # TFLite embedding + matching
+│   ├── livenessDetector.ts          # Challenge detection
+│   ├── database.ts                  # Offline storage
+│   └── syncService.ts               # AWS sync stub
+└── utils/
+    └── camera.ts                    # Camera capture utility
+
+android/
+└── app/src/main/java/com/faceauthoffline/
+    ├── MainActivity.kt
+    ├── MainApplication.kt
+    ├── CameraModule.kt              # Native camera intent
+    ├── CameraPackage.kt
+    ├── FaceRecognitionModule.kt     # TFLite MobileFaceNet inference
+    └── FaceRecognitionPackage.kt
+
+assets/models/
+    ├── mobilefacenet.tflite         # 128-d face embedding (~5MB)
+    ├── face_detector.tflite         # BlazeFace detector (~0.2MB)
+    └── face_landmarker.task         # MediaPipe landmarks (~3.6MB)
 ```
 
 ---
 
-## Model Footprint
+## Model Details
 
-| Model | Size | Purpose |
-|-------|------|---------|
-| mobilefacenet.tflite | ~5 MB | 128-d face embedding |
-| face_detector.tflite | ~0.2 MB | Face presence check |
-| face_landmarker.task | ~3.6 MB | Liveness landmarks |
-| **Total** | **~9 MB** | Under 20MB target ✅ |
+| Model | Size | Input | Output |
+|-------|------|-------|--------|
+| MobileFaceNet | ~5 MB | 112×112×3 normalized | 128-d embedding |
+| BlazeFace | ~0.2 MB | 128×128×3 | Detection scores |
+| FaceLandmarker | ~3.6 MB | Face crop | 478 landmarks |
+| **Total** | **~9 MB** | | Under 20MB ✅ |
 
 ---
 
@@ -156,51 +147,13 @@ assets/
 | Error | Fix |
 |-------|-----|
 | `adb not found` | Add `%ANDROID_HOME%\platform-tools` to PATH |
-| `java not found` | Add `%JAVA_HOME%\bin` to PATH, restart terminal |
-| `Can't find service: package` | Wait for emulator home screen to fully load |
-| App crashes on launch | Run JS bundle step (Step 3) before building |
-| Port 8081 in use | Run `taskkill /F /IM node.exe` |
-
----
-
-## iOS Setup (Mac only)
-
-### Prerequisites
-- Mac computer with Xcode 14+
-- CocoaPods: `sudo gem install cocoapods`
-- Apple Developer account (for device testing)
-
-### Run on iOS
-
-```bash
-# Step 1 - Install dependencies
-cd FaceAuthOffline
-npm install
-
-# Step 2 - Install iOS pods
-cd ios
-pod install
-cd ..
-
-# Step 3 - Run on simulator
-npx react-native run-ios
-
-# Step 4 - Run on device
-npx react-native run-ios --device "Your iPhone Name"
-```
-
-### Build IPA for distribution
-```bash
-# Open Xcode
-open ios/FaceAuthOffline.xcworkspace
-
-# In Xcode:
-# Product → Archive → Distribute App
-```
+| `java not found` | Add `%JAVA_HOME%\bin` to PATH |
+| `Can't find service: package` | Wait for emulator home screen |
+| App crashes on launch | Run JS bundle step before building |
+| Camera blank in emulator | Use real Android device or set webcam in AVD settings |
 
 ---
 
 ## License
 
-All models and libraries used are open-source (Apache 2.0 / MIT).
-No proprietary licenses required.
+Open-source (Apache 2.0 / MIT). No proprietary licenses required.

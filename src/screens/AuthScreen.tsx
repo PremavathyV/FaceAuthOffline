@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Screen } from '../App';
 import { LivenessDetector, LivenessChallenge } from '../services/livenessDetector';
 import { FaceRecognitionService } from '../services/faceRecognition';
@@ -10,6 +10,7 @@ type Props = { navigate: (s: Screen, params?: any) => void };
 export default function AuthScreen({ navigate }: Props) {
   const [challenge, setChallenge]   = useState<LivenessChallenge | null>(null);
   const [photoTaken, setPhotoTaken] = useState(false);
+  const [photoUri, setPhotoUri]     = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -19,11 +20,14 @@ export default function AuthScreen({ navigate }: Props) {
   const handleCameraPress = async () => {
     const { launchCamera } = require('../utils/camera');
     const uri = await launchCamera();
-    if (uri) setPhotoTaken(true);
+    if (uri) {
+      setPhotoUri(uri);
+      setPhotoTaken(true);
+    }
   };
 
   const authenticate = async () => {
-    if (!photoTaken) return;
+    if (!photoTaken || !photoUri) return;
     setProcessing(true);
     try {
       const allUsers = await DatabaseService.getAllUsers();
@@ -32,39 +36,35 @@ export default function AuthScreen({ navigate }: Props) {
         return;
       }
 
-      // Try matching against ALL enrolled users
-      // For each enrolled user, generate their deterministic embedding
-      // and compare with query
-      let bestMatch = null;
-      let bestScore = -1;
+      // Extract real face embedding from captured photo using TFLite
+      const queryEmbedding = await FaceRecognitionService.extractEmbedding(photoUri);
 
-      for (const user of allUsers) {
-        // Regenerate the deterministic embedding for this user
-        const enrolledEmbedding = await FaceRecognitionService.extractEmbedding(user.id);
-        const score = FaceRecognitionService.cosineSimilarity(enrolledEmbedding, user.embedding);
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = user;
-        }
+      if (!queryEmbedding || queryEmbedding.length === 0) {
+        navigate('Result', { success: false, message: 'Could not detect face. Please try again.' });
+        return;
       }
 
-      // Since same userId generates same embedding, score will be ~1.0
-      if (bestScore >= 0.95) {
+      // Compare against all enrolled users
+      const match = FaceRecognitionService.findBestMatch(queryEmbedding, allUsers);
+
+      if (match) {
         await DatabaseService.logAttendance({
-          userId: bestMatch!.id,
+          userId: match.id,
           timestamp: Date.now(),
           synced: false,
         });
         navigate('Result', {
           success: true,
-          userId: bestMatch!.id,
-          userName: bestMatch!.name,
+          userId: match.id,
+          userName: match.name,
           timestamp: Date.now(),
-          message: `Welcome, ${bestMatch!.name}!`,
+          message: `Welcome, ${match.name}!`,
         });
       } else {
         navigate('Result', { success: false, message: 'Face not recognized. Access denied.' });
       }
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Authentication failed');
     } finally {
       setProcessing(false);
     }

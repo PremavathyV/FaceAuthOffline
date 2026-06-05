@@ -15,12 +15,11 @@ class MainApplication : Application(), ReactApplication {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
               add(CameraPackage())
+              add(FaceRecognitionPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
-
         override fun getUseDeveloperSupport(): Boolean = false
-
         override val isNewArchEnabled: Boolean = false
         override val isHermesEnabled: Boolean = true
       }

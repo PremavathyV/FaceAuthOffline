@@ -15,6 +15,7 @@ export default function EnrollScreen({ navigate }: Props) {
   const [challenge, setChallenge]   = useState<LivenessChallenge | null>(null);
   const [step, setStep]             = useState<'form' | 'liveness'>('form');
   const [photoTaken, setPhotoTaken] = useState(false);
+  const [photoUri, setPhotoUri]     = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
   const startEnrollment = () => {
@@ -30,6 +31,7 @@ export default function EnrollScreen({ navigate }: Props) {
     const { launchCamera } = require('../utils/camera');
     const uri = await launchCamera();
     if (uri) {
+      setPhotoUri(uri);
       setPhotoTaken(true);
     }
   };
@@ -41,10 +43,15 @@ export default function EnrollScreen({ navigate }: Props) {
     }
     setProcessing(true);
     try {
-      // Generate deterministic embedding from userId
-      // Same userId always produces same embedding → consistent matching
+      // Extract real face embedding using TFLite MobileFaceNet
       const { FaceRecognitionService } = require('../services/faceRecognition');
-      const embedding = await FaceRecognitionService.extractEmbedding(userId.trim());
+      const embedding = await FaceRecognitionService.extractEmbedding(photoUri ?? '');
+
+      if (!embedding || embedding.length === 0) {
+        Alert.alert('Error', 'Could not extract face features. Please try again.');
+        setProcessing(false);
+        return;
+      }
 
       await DatabaseService.saveUser({
         id: userId.trim(),
